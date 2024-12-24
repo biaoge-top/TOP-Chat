@@ -1,0 +1,51 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>CHAT</title>
+	<meta name="Robots" content="All" />
+	<meta http-equiv='content-language' content='zh-CN'>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+	<script src="./style/js/vue.min.js" type="text/javascript" charset="utf-8"></script>
+	<link rel="stylesheet" href="./style/css/element-ui.css">
+	<link rel="stylesheet" href="./style/css/animate.min.css" />
+	<link rel="stylesheet" href="./style/css/index.css" />
+	<script src="./style/js/element-ui.js"></script>
+	<script src="./style/js/axios.min.js"></script>
+</head>
+<body>
+<div id="app">
+	
+</div>
+
+<script type="text/javascript">
+new Vue({
+el: '#app',
+data() {
+	return {
+
+	}
+},methods: {
+	main(){
+		var that = this;
+		axios.get("api/newmain.json").then(function(resp) {
+			let data = resp.data;
+			let static = data.static;
+			if(static=='200') {
+				
+			}else if(static =='400') alert(data.msg);
+		});
+	}
+
+},mounted:function(){
+	
+},created(){
+	
+}
+})
+
+</script>
+</body>
+</html>

@@ -1,0 +1,235 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>CHAT</title>
+	<meta name="Robots" content="All" />
+	<meta http-equiv='content-language' content='zh-CN'>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+	<script src="./style/js/vue.min.js" type="text/javascript" charset="utf-8"></script>
+	<link rel="stylesheet" href="./style/css/element-ui.css">
+	<link rel="stylesheet" href="./style/css/animate.min.css" />
+	<link rel="stylesheet" href="./style/css/index.css" />
+	<script src="./style/js/element-ui.js"></script>
+	<script src="./style/js/axios.min.js"></script>
+</head>
+<body>
+<div id="app">
+	<div class="el-main">
+		<div class="chatlist-div">
+			<div class="title-div">
+				<img src="./style/image/toplogo.png" alt="logo" />
+				<h2>TOP CHAT</h2>
+			</div>
+			<div class="chatso">
+				<form>
+					<input type="text" placeholder="用户名/聊天记录/QQ号"/>
+					<input type="image" src="./style/image/so.png" alt="so" />
+				</form>
+			</div>
+			<div class="chatlist" v-for="item in chatlist" key="item">
+				<div class="chatlist-info-div" @click="openchat(item[0])">
+					<img src="./style/image/mode.png" alt="tx"/>
+					<div class="chatlist-info">
+						<h3>{{ item[0] }}</h3>
+						<dd>{{ item[2] }}</dd>
+						<tt>{{ item[1] && typeof item[1] === 'string' ? (item[1].length < 5 ? item[1] : item[1].substring(11, Math.min(item[1].length, 16))) : '' }}</tt>
+
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="chatinfo-div">
+			<div class="chattitle">
+				<h1 v-text="uname"></h1>
+			</div>
+			<div class="chatmsg-div" id="chatmsgdiv">
+				<div class="chatmsg" v-for="(index,idea) in chatmsg" key="index">
+					<div class="chatmsg-time">
+						<dd>{{ index[1].substring(0,15)==chatmsg[(idea==0?(chatmsg[1]==null?0:1):(idea-1))][1].substring(0,15)?'':index[1] }}</dd>
+					</div>
+					<div :class="index[0]==username?'chatmsg-me':'chatmsg-to'">
+						<div class="chatpic">
+							<img src="./style/image/mode.png" alt="tx" />
+						</div>
+						<div class="chatmsg-info">
+							<dd>{{ index[0] }}</dd>
+							<span>
+								{{ index[2] }}
+							</span>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="el-input top-border">
+				<b @click="adds('😀')">😀</b>
+				<i class="el-icon-picture-outline-round"></i>
+				<i class="el-icon-camera"></i>
+				<i class="el-icon-upload"></i>
+				<i class="el-icon-link"></i>
+				<i class="el-icon-share"></i>
+			</div>
+			<div class="el-input">
+				<el-input type="textarea" v-model="setchatmsg" placeholder="输入你要发送的消息"></el-input>
+				<el-button type="primary" size="mini" @click="setchat">发送</el-button>
+			</div>
+	</div>
+	<audio style="display: none;" ref="messageSound" src="./style/file/new.mp3" @ended="onSoundEnded" autoplay playsinline></audio>
+</div>
+
+<script type="text/javascript">
+new Vue({
+el: '#app',
+data() {
+	return {
+		chatlist:null,username:null,chatmsg:null,uname:"UserName",setchatmsg:null,
+		isPlaying: false,chatname:null
+		
+	}
+},watch: {
+	chatmsg:function(){
+		this.$nextTick(function(){
+			this.openend();
+		})
+	}
+}
+
+,methods: {
+	getchatlist(){
+		var that = this;
+		axios.get("api/chatlist.json").then(function(resp) {
+			let data = resp.data;
+			let static = data.static;
+			if(static=="200") {
+				that.chatlist = data.chatlist;
+				that.username = data.username;
+				that.uname = data.chatlist[0][0];
+				console.log(that.uname)
+				that.getchatinfo(that.uname);
+				
+			}else if(static=="400") alert(data.msg);
+		});
+	},
+	getchatinfo(uname){
+		this.uname = uname;
+		let chatname = null;
+		if(this.username > uname) {
+			chatname = this.username+"_"+uname;
+		}else {
+			chatname = uname+"_"+this.username;
+		}
+		this.chatname = chatname;
+		
+		var that = this;
+		axios.get("chat/"+chatname+".json").then(function(resp) {
+			let data = resp.data;
+			if(data) {
+				that.chatmsg = data;
+				const length = data.length;
+				let nowchatmsg = (data[length - 1]);
+				const indexTo = that.chatlist.findIndex(item => {
+				       return item[0] === uname});
+				Vue.set(that.chatlist, indexTo, [uname, nowchatmsg[1], nowchatmsg[2]]);
+			}
+			else {
+				let date = new Date();
+				let month = String(date.getMonth() + 1).padStart(2, '0'); 
+				let day = String(date.getDate()).padStart(2, '0');
+				let time = month + '-' + day;
+				that.chatmsg=null;
+				that.chatmsg=Array([uname,time,"我们已经成功添加好友，开始聊天吧！","system"]);
+				const indexTo = that.chatlist.findIndex(item => {
+				       return item[0] === uname});
+				Vue.set(that.chatlist, indexTo, [uname, time, "我们已经成功添加好友，开始聊天吧！"]);
+			}
+		});
+		//this.openend();
+	},
+	openchat(uname){
+		console.log(uname)
+		if(this.uname!=uname){
+			this.uname = uname;
+			this.getchatinfo(uname);
+		}
+		
+	},
+	setchat(){
+		if(this.setchatmsg){
+			let date = new Date();
+			let year = date.getFullYear();
+			let month = String(date.getMonth() + 1).padStart(2, '0'); 
+			let day = String(date.getDate()).padStart(2, '0');
+			let hours = String(date.getHours()).padStart(2, '0');
+			let minutes = String(date.getMinutes()).padStart(2, '0');
+			let time = year + '-' + month + '-' + day + ' ' + hours + ':' + minutes;
+			this.chatmsg.push([this.username,time,this.setchatmsg,"text"]);	
+			
+			var that = this;
+			axios.post("api/adds.php",{
+				chatmsg:this.setchatmsg,
+				chatname:this.chatname,
+				uname:this.uname,
+				username:this.username
+			}).then(function(resp) {
+				let data = resp.data;
+				let static = data.static;
+				if(static=="200") {
+					console.log(data.msg);
+				}else if(static=="400") alert(data.msg);
+			});
+			
+			this.setchatmsg = null;
+		}else{
+			this.$message.error('请输入需要发送的信息！');
+		}
+	},
+	adds(msg){
+		if(this.setchatmsg) this.setchatmsg = this.setchatmsg + msg;
+		else this.setchatmsg = msg;
+	},
+	openend(){
+		const scroll = document.querySelector('.chatmsg-div');
+		scroll.scrollTop = scroll.scrollHeight;
+		//console.log(scroll.scrollHeight)
+	},
+	newchat(){
+		var that = this;
+		axios.get("newchat/"+that.username+".json").then(function(resp) {
+			let data = resp.data;
+			if(data){
+				for(dataitem in data){
+					that.chatlist = that.chatlist.filter(function(item) {
+					  return item[0] !== data[dataitem][0]
+					});
+				}
+				for(index in data){
+					that.chatlist.unshift(data[index]);
+				}
+				if(data[index][0]==that.uname){
+					that.getchatinfo(data[index][0]);
+				}
+				that.playMessageSound();
+			}
+		});
+		
+	},
+	onSoundEnded() {  
+		this.isPlaying = false;  	  
+	},
+	playMessageSound() {  
+		this.$refs.messageSound.play().then(() => {
+		    this.isPlaying = true; // 播放
+		}).catch(error => {  });  
+	}
+},mounted:function(){
+	this.getchatlist()
+},created(){
+	window.setInterval(() => {setTimeout(this.newchat(), 0);}, 3000);
+}
+})
+
+</script>
+</body>
+</html>
